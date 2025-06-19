@@ -1,7 +1,85 @@
-import PageLayout from "@/components/PageLayout"
-import { MapPin, Phone, Mail, Clock, Send } from "lucide-react"
+"use client";
+
+import { useState } from "react";
+import PageLayout from "@/components/PageLayout";
+import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
+
+interface FormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  subject: string;
+  message: string;
+}
+
+interface SubmitStatus {
+  type: "success" | "error";
+  message: string;
+}
 
 export default function Contact() {
+  const [formData, setFormData] = useState<FormData>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    subject: "",
+    message: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitStatus(null);
+
+    try {
+      const response = await fetch("http://localhost:8000/submit-form/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "http://localhost:3000", // Optional, handled by backend ideally
+        },
+        body: JSON.stringify({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          subject: formData.subject,
+          message: formData.message,
+        }),
+        credentials: "include", // Include credentials if needed
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setSubmitStatus({ type: "success", message: data.message || "Message sent successfully!" });
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        subject: "",
+        message: "",
+      });
+    } catch (error) {
+      console.error("Submission error:", error);
+      setSubmitStatus({ type: "error", message: "An error occurred. Please try again later." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <PageLayout
       title="Contact Us"
@@ -44,7 +122,7 @@ export default function Contact() {
           {/* Contact Form */}
           <div className="bg-white p-8 rounded-lg shadow-lg border border-gray-200">
             <h2 className="text-2xl font-semibold text-[#011D5B] mb-6">Send us a Message</h2>
-            <form className="space-y-6">
+            <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
@@ -54,8 +132,11 @@ export default function Contact() {
                     type="text"
                     id="firstName"
                     name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-300"
                     placeholder="Your first name"
+                    required
                   />
                 </div>
                 <div>
@@ -66,8 +147,11 @@ export default function Contact() {
                     type="text"
                     id="lastName"
                     name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-300"
                     placeholder="Your last name"
+                    required
                   />
                 </div>
               </div>
@@ -80,8 +164,11 @@ export default function Contact() {
                   type="email"
                   id="email"
                   name="email"
+                  value={formData.email}
+                  onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-300"
                   placeholder="your.email@example.com"
+                  required
                 />
               </div>
 
@@ -93,8 +180,11 @@ export default function Contact() {
                   type="tel"
                   id="phone"
                   name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-300"
                   placeholder="+977-XXXXXXXXXX"
+                  required
                 />
               </div>
 
@@ -105,7 +195,10 @@ export default function Contact() {
                 <select
                   id="subject"
                   name="subject"
+                  value={formData.subject}
+                  onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-300"
+                  required
                 >
                   <option value="">Select a subject</option>
                   <option value="job-inquiry">Job Inquiry</option>
@@ -124,18 +217,34 @@ export default function Contact() {
                   id="message"
                   name="message"
                   rows={5}
+                  value={formData.message}
+                  onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-300"
                   placeholder="Tell us about your requirements or questions..."
+                  required
                 ></textarea>
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-green-600 to-red-600 text-white px-8 py-4 rounded-lg font-semibold hover:from-green-700 hover:to-red-700 transition-all duration-300 flex items-center justify-center"
+                disabled={isSubmitting}
+                className={`w-full bg-gradient-to-r from-green-600 to-red-600 text-white px-8 py-4 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center ${
+                  isSubmitting ? "opacity-50 cursor-not-allowed" : "hover:from-green-700 hover:to-red-700"
+                }`}
               >
                 <Send className="w-5 h-5 mr-2" />
-                Send Message
+                {isSubmitting ? "Sending..." : "Send Message"}
               </button>
+
+              {submitStatus && (
+                <div
+                  className={`mt-4 p-4 rounded-lg ${
+                    submitStatus.type === "success" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {submitStatus.message}
+                </div>
+              )}
             </form>
           </div>
 
@@ -240,5 +349,5 @@ export default function Contact() {
         </div>
       </div>
     </PageLayout>
-  )
+  );
 }

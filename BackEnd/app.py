@@ -66,3 +66,4 @@ async def submit_form(form: ContactForm):
     db.refresh(new_message)
     db.close()
     return {"message": "Form submitted successfully!"}
+
